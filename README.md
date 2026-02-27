@@ -15,12 +15,12 @@
 
 ### Komplettes LoRa-System (Hotspot, LoRa, Dashboard)
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/ZeroTw0016/LoRa-Test/main/lora_system/setup.sh)
+screen -S lora-setup bash -c "bash <(curl -s https://raw.githubusercontent.com/ZeroTw0016/LoRa-Test/main/setup.sh)"
 ```
 
-### Nur WLAN-Access-Point mit DHCP
+### Nur WLAN-Access-Point (eigene IP via LoRa-DHCP)
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/ZeroTw0016/LoRa-Test/main/lora_system/setup_ap.sh)
+screen -S lora-ap-setup bash -c "bash <(curl -s https://raw.githubusercontent.com/ZeroTw0016/LoRa-Test/main/setup_ap.sh)"
 ```
 
 ### LoRa-DHCP-Relay für WLAN-Clients
@@ -29,6 +29,7 @@ python3 lora_dhcp_relay.py
 ```
 
 Das jeweilige Skript installiert und konfiguriert alles automatisch (je nach Setup).
+Für AP-Knoten startet `setup_ap.sh` den Dienst `lora-dhcp-client.service`, damit der AP seine eigene `wlan0`-IP per LoRa-DHCP erhält.
 
 ---
 Manuelle Installation (falls nötig):

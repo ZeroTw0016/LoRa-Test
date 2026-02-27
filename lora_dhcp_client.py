@@ -10,26 +10,29 @@ NODE_ID = sys.argv[1] if len(sys.argv) > 1 else 'node1'
 
 print(f"LoRa DHCP-Client gestartet (Node-ID: {NODE_ID})")
 
+if not ser:
+    print("[DHCP-Client Error] LoRa-Serial nicht verfügbar.")
+    sys.exit(1)
+
 # DHCPDISCOVER senden
-if ser:
-    radio.send_message(ser, f"DHCPDISCOVER:{NODE_ID}\n")
+radio.send_message(ser, f"DHCPDISCOVER:{NODE_ID}\n")
 
 # Auf DHCPOFFER warten
 while True:
-    if ser:
-        try:
-            data = ser.read_until()
-            if not data:
-                time.sleep(1)
-                continue
-            msg = data.decode('utf-8').strip()
-            if msg.startswith(f"DHCPOFFER:{NODE_ID}:"):
-                ip = msg.split(':')[2]
-                print(f"DHCP-OFFER empfangen: {ip}")
-                # IP zuweisen
-                os.system(f"sudo ip addr add {ip}/24 dev wlan0")
-                print(f"IP {ip} auf wlan0 gesetzt.")
-                break
-        except Exception as e:
-            print("[DHCP-Client Error]", e)
+    try:
+        data = ser.read_until()
+        if not data:
+            time.sleep(1)
+            continue
+        msg = data.decode('utf-8').strip()
+        if msg.startswith(f"DHCPOFFER:{NODE_ID}:"):
+            ip = msg.split(':')[2]
+            print(f"DHCP-OFFER empfangen: {ip}")
+            # IP zuweisen (vorher bestehende IPv4-Adresse entfernen)
+            os.system("sudo ip -4 addr flush dev wlan0")
+            os.system(f"sudo ip addr add {ip}/24 dev wlan0")
+            print(f"IP {ip} auf wlan0 gesetzt.")
+            break
+    except Exception as e:
+        print("[DHCP-Client Error]", e)
     time.sleep(1)
