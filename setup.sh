@@ -29,7 +29,7 @@ fi
 cd lora_system
 
 # Python-Abhängigkeiten (benötigt Internet)
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --break-system-packages
 
 # SX1262-HAT Python-Library (benötigt Internet)
 if [ ! -d "SX126X-LoRa-PI-HAT-Waveshare" ]; then
