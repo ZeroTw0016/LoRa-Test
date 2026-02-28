@@ -110,6 +110,11 @@
             <div id="devicesList">Loading...</div>
         </div>
         <div class="card">
+            <h2>System</h2>
+            <button id="updateBtn">Update & Reboot</button>
+            <div id="updateStatus"></div>
+        </div>
+        <div class="card">
             <h2>Received Messages</h2>
             <button onclick="fetchRecv()">Refresh</button>
             <div id="recvData"></div>
@@ -123,6 +128,12 @@
             const data = await res.json();
             document.getElementById('sendStatus').innerText = data.status;
             await fetchHistory();
+        };
+        document.getElementById('updateBtn').onclick = async function() {
+            document.getElementById('updateStatus').innerText = 'Updating and rebooting...';
+            const res = await fetch('/update', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('updateStatus').innerText = data.status;
         };
         async function fetchHistory() {
             const res = await fetch('/history');

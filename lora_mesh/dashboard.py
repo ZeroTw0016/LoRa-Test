@@ -2,6 +2,27 @@ from flask import Flask, render_template, request, jsonify
 import threading
 from .node import LoRaMeshNode
 import time
+import subprocess
+
+app = Flask(__name__)
+node = LoRaMeshNode()
+node.config_mesh()
+
+# ...existing code...
+
+# Update and reboot endpoint
+@app.route('/update', methods=['POST'])
+def update():
+    # Run setup_wifi_ap.sh and reboot
+    try:
+        subprocess.Popen(['sudo', 'bash', 'setup_wifi_ap.sh'])
+        return jsonify({'status': 'Updating and rebooting...'}), 202
+    except Exception as e:
+        return jsonify({'status': f'Update failed: {e}'}), 500
+from flask import Flask, render_template, request, jsonify
+import threading
+from .node import LoRaMeshNode
+import time
 
 app = Flask(__name__)
 node = LoRaMeshNode()
