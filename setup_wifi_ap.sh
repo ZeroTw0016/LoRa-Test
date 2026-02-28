@@ -6,7 +6,7 @@ SSID="LoRaMesh"
 PASSWORD="loramesh123"
 
 apt-get update
-apt-get install -y hostapd dnsmasq
+apt-get install -y hostapd dnsmasq python3-pip
 systemctl stop hostapd
 echo -e "interface wlan0
 static ip_address=192.168.50.1/24
@@ -38,6 +38,9 @@ EOF
 
 systemctl start hostapd
 systemctl start dnsmasq
+
+# Install Python dependencies
+pip3 install flask pyserial
 
 # Now the Pi is a WiFi AP at 192.168.50.1
 # Connect your phone and access the dashboard at http://192.168.50.1:5000
