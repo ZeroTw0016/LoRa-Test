@@ -2,16 +2,25 @@
 # Enable Raspberry Pi WiFi AP for LoRa mesh dashboard access
 # Run as root (sudo)
 
-SSID="LoRaMesh"
+SSID="ZeroLora"
 PASSWORD="loramesh123"
 
 apt-get update
 apt-get install -y hostapd dnsmasq python3-pip
 systemctl stop hostapd
-echo -e "interface wlan0
 static ip_address=192.168.50.1/24
 nohook wpa_supplicant" >> /etc/dhcpcd.conf
+sed -i '/^interface wlan0$/,/^nohook wpa_supplicant$/d' /etc/dhcpcd.conf
+echo -e "interface wlan0\nstatic ip_address=192.168.50.1/24\nnohook wpa_supplicant" >> /etc/dhcpcd.conf
 service dhcpcd restart
+
+# Remove conflicting WiFi client configs
+if [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+	mv /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf.bak
+fi
+if [ -f /etc/NetworkManager/NetworkManager.conf ]; then
+	mv /etc/NetworkManager/NetworkManager.conf /etc/NetworkManager/NetworkManager.conf.bak
+fi
 
 cat > /etc/hostapd/hostapd.conf <<EOF
 interface=wlan0
