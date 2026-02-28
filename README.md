@@ -8,34 +8,16 @@
 
 ## Quick Setup (Raspberry Pi)
 
-### 1. Clone Repository
+### One-line install (run as root):
 ```bash
-git clone https://github.com/yourusername/LoRa-Test.git
-cd LoRa-Test
+git clone https://github.com/yourusername/LoRa-Test.git && cd LoRa-Test && sudo bash setup_wifi_ap.sh && sudo reboot
 ```
 
-### 2. Install Python Dependencies
-```bash
-pip install flask pyserial
-```
-
-### 3. Enable WiFi Access Point
-Run the setup script as root:
-```bash
-sudo bash setup_wifi_ap.sh
-```
-- Default SSID: `LoRaMesh`
-- Default Password: `loramesh123`
-- Dashboard: http://192.168.50.1:5000
-
-### 4. Run the Dashboard
-```bash
-python -m lora_mesh.dashboard
-```
-
-### 5. Connect Devices
-- Connect your phone to the Pi WiFi.
-- Use the dashboard to send/receive LoRa messages.
+### Details
+1. Clones the repo and runs the setup script
+2. Sets up WiFi AP (SSID: `ZeroLora`, Password: `loramesh123`)
+3. Installs all dependencies and enables dashboard as a service
+4. After reboot, connect your phone to `ZeroLora` and open http://192.168.50.1:5000 for chat
 
 ## Customization
 - Change SSID/password in `setup_wifi_ap.sh`.
@@ -45,6 +27,7 @@ python -m lora_mesh.dashboard
 - Ensure you run on Raspberry Pi OS (for RPi.GPIO).
 - Use `sudo` for WiFi setup.
 - Check serial and GPIO wiring for LoRa module.
+- If you want to restore WiFi client mode, rename `/etc/wpa_supplicant/wpa_supplicant.conf.bak` back to `.conf` and reboot.
 
 ---
 For questions or improvements, open an issue or contact the maintainer.
