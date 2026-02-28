@@ -40,7 +40,13 @@ systemctl start hostapd
 systemctl start dnsmasq
 
 # Install Python dependencies
-pip3 install flask pyserial
+pip3 install flask pyserial --beak-system-packages
+
+# Install and enable dashboard as a systemd service
+cp lora_mesh_dashboard.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable lora_mesh_dashboard.service
+systemctl start lora_mesh_dashboard.service
 
 # Now the Pi is a WiFi AP at 192.168.50.1
-# Connect your phone and access the dashboard at http://192.168.50.1:5000
+# Connect your phone and access the dashboard chat at http://192.168.50.1:5000

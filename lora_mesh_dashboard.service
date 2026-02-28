@@ -1,0 +1,13 @@
+[Unit]
+Description=LoRa Mesh Dashboard
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 -m lora_mesh.dashboard
+WorkingDirectory=/home/zero/LoRa-Test
+Restart=always
+User=zero
+Environment=LORA_SERIAL_PORT=/dev/ttyS0
+
+[Install]
+WantedBy=multi-user.target

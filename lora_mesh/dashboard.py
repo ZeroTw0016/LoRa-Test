@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import threading
 from .node import LoRaMeshNode
+import time
 
 app = Flask(__name__)
 node = LoRaMeshNode()
 node.config_mesh()
 
-# Store seen devices in memory (for demo)
+# Store seen devices and message history in memory
 connected_devices = {}
+message_history = []
 
 @app.route('/')
 def index():
@@ -18,6 +20,15 @@ def send():
     target = int(request.form['target'], 16)
     msg = request.form['message'].encode()
     node.send_mesh(target, msg)
+    # Add to history as outgoing message
+    message_history.append({
+        'timestamp': time.strftime('%H:%M:%S'),
+        'from': 'Me',
+        'to': hex(target),
+        'payload': request.form['message'],
+        'rssi': None,
+        'outgoing': True
+    })
     return jsonify({'status': 'sent'})
 
 @app.route('/recv')
@@ -25,15 +36,28 @@ def recv():
     result = node.recv_mesh()
     if result:
         addr, payload, rssi = result
-        # Track device
         connected_devices[addr] = {'addr': hex(addr), 'rssi': rssi}
-        return jsonify({'from': hex(addr), 'payload': payload.decode(errors='ignore'), 'rssi': rssi})
+        text = payload.decode(errors='ignore')
+        # Add to history as incoming message
+        message_history.append({
+            'timestamp': time.strftime('%H:%M:%S'),
+            'from': hex(addr),
+            'to': 'Me',
+            'payload': text,
+            'rssi': rssi,
+            'outgoing': False
+        })
+        return jsonify({'from': hex(addr), 'payload': text, 'rssi': rssi})
     return jsonify({'status': 'no data'})
 
 @app.route('/devices')
 def devices():
-    # Return all seen devices
     return jsonify({'devices': list(connected_devices.values())})
+
+@app.route('/history')
+def history():
+    # Return last 50 messages
+    return jsonify({'messages': message_history[-50:]})
 
 def run_dashboard():
     app.run(host='0.0.0.0', port=5000)

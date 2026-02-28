@@ -6,13 +6,14 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
+            margin: 0;
             background: #181a20;
             color: #e0e0e0;
         }
         .container {
             max-width: 600px;
             margin: auto;
+            padding: 10px;
         }
         .card {
             background: #23272f;
@@ -49,16 +50,56 @@
             border-radius: 6px;
             padding: 10px;
         }
+        .chat {
+            background: #181a20;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .msg {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            max-width: 80%;
+            word-break: break-word;
+            display: flex;
+            flex-direction: column;
+        }
+        .msg.me {
+            background: #2d8cf0;
+            color: #fff;
+            margin-left: auto;
+            align-items: flex-end;
+        }
+        .msg.them {
+            background: #23272f;
+            color: #e0e0e0;
+            margin-right: auto;
+            align-items: flex-start;
+        }
+        .msg .meta {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-top: 2px;
+        }
+        @media (max-width: 700px) {
+            .container { max-width: 100vw; padding: 2vw; }
+            .card { padding: 10px; }
+            .chat { max-height: 40vh; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>LoRa Mesh Dashboard</h1>
         <div class="card">
-            <h2>Send Message</h2>
-            <form id="sendForm">
-                <label>Target Addr (hex): <input type="text" name="target" value="FFFF" /></label><br><br>
-                <label>Message: <input type="text" name="message" /></label><br><br>
+            <h2>Chat</h2>
+            <div class="chat" id="chatBox">Loading...</div>
+            <form id="sendForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input type="text" name="target" value="FFFF" style="width:90px" placeholder="Target (hex)" />
+                <input type="text" name="message" style="flex:1" placeholder="Type a message..." />
                 <button type="submit">Send</button>
             </form>
             <div id="sendStatus"></div>
@@ -81,15 +122,27 @@
             const res = await fetch('/send', { method: 'POST', body: form });
             const data = await res.json();
             document.getElementById('sendStatus').innerText = data.status;
+            await fetchHistory();
         };
-        async function fetchRecv() {
-            const res = await fetch('/recv');
+        async function fetchHistory() {
+            const res = await fetch('/history');
             const data = await res.json();
-            if (data.from) {
-                document.getElementById('recvData').innerText = `From: ${data.from}\nMsg: ${data.payload}\nRSSI: ${data.rssi}`;
+            const chatBox = document.getElementById('chatBox');
+            if (Array.isArray(data.messages)) {
+                chatBox.innerHTML = data.messages.map(msg => `
+                    <div class="msg ${msg.outgoing ? 'me' : 'them'}">
+                        <div>${msg.payload}</div>
+                        <div class="meta">${msg.outgoing ? 'To ' + msg.to : 'From ' + msg.from} • ${msg.timestamp}${msg.rssi !== null ? ' • RSSI: ' + msg.rssi : ''}</div>
+                    </div>
+                `).join('');
+                chatBox.scrollTop = chatBox.scrollHeight;
             } else {
-                document.getElementById('recvData').innerText = data.status;
+                chatBox.innerText = 'No messages.';
             }
+        }
+        async function fetchRecv() {
+            await fetch('/recv');
+            await fetchHistory();
         }
         async function fetchDevices() {
             const res = await fetch('/devices');
@@ -102,6 +155,8 @@
             }
         }
         fetchDevices();
+        fetchHistory();
+        setInterval(fetchRecv, 2000);
     </script>
 </body>
 </html>
