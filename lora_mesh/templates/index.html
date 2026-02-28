@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LoRa Mesh Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: auto; }
+        .card { background: #f8f8f8; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LoRa Mesh Dashboard</h1>
+        <div class="card">
+            <h2>Send Message</h2>
+            <form id="sendForm">
+                <label>Target Addr (hex): <input type="text" name="target" value="FFFF" /></label><br><br>
+                <label>Message: <input type="text" name="message" /></label><br><br>
+                <button type="submit">Send</button>
+            </form>
+            <div id="sendStatus"></div>
+        </div>
+        <div class="card">
+            <h2>Received Messages</h2>
+            <button onclick="fetchRecv()">Refresh</button>
+            <div id="recvData"></div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('sendForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const form = new FormData(this);
+            const res = await fetch('/send', { method: 'POST', body: form });
+            const data = await res.json();
+            document.getElementById('sendStatus').innerText = data.status;
+        };
+        async function fetchRecv() {
+            const res = await fetch('/recv');
+            const data = await res.json();
+            if (data.from) {
+                document.getElementById('recvData').innerText = `From: ${data.from}\nMsg: ${data.payload}\nRSSI: ${data.rssi}`;
+            } else {
+                document.getElementById('recvData').innerText = data.status;
+            }
+        }
+    </script>
+</body>
+</html>
