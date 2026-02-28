@@ -4,10 +4,51 @@
     <meta charset="UTF-8">
     <title>LoRa Mesh Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .container { max-width: 600px; margin: auto; }
-        .card { background: #f8f8f8; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        button { padding: 8px 16px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #181a20;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .card {
+            background: #23272f;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px #0004;
+        }
+        button {
+            padding: 8px 16px;
+            background: #2d8cf0;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1a6fb3;
+        }
+        input {
+            background: #181a20;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 6px;
+        }
+        h1, h2 {
+            color: #2d8cf0;
+        }
+        #devicesList {
+            margin-top: 10px;
+            background: #23272f;
+            border-radius: 6px;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -21,6 +62,11 @@
                 <button type="submit">Send</button>
             </form>
             <div id="sendStatus"></div>
+        </div>
+        <div class="card">
+            <h2>Connected Devices</h2>
+            <button onclick="fetchDevices()">Refresh</button>
+            <div id="devicesList">Loading...</div>
         </div>
         <div class="card">
             <h2>Received Messages</h2>
@@ -45,6 +91,17 @@
                 document.getElementById('recvData').innerText = data.status;
             }
         }
+        async function fetchDevices() {
+            const res = await fetch('/devices');
+            const data = await res.json();
+            if (Array.isArray(data.devices)) {
+                document.getElementById('devicesList').innerHTML = data.devices.length ?
+                    data.devices.map(d => `<div>Addr: <b>${d.addr}</b> | RSSI: ${d.rssi}</div>`).join('') : 'No devices.';
+            } else {
+                document.getElementById('devicesList').innerText = 'No devices.';
+            }
+        }
+        fetchDevices();
     </script>
 </body>
 </html>

@@ -6,6 +6,9 @@ app = Flask(__name__)
 node = LoRaMeshNode()
 node.config_mesh()
 
+# Store seen devices in memory (for demo)
+connected_devices = {}
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -22,8 +25,15 @@ def recv():
     result = node.recv_mesh()
     if result:
         addr, payload, rssi = result
+        # Track device
+        connected_devices[addr] = {'addr': hex(addr), 'rssi': rssi}
         return jsonify({'from': hex(addr), 'payload': payload.decode(errors='ignore'), 'rssi': rssi})
     return jsonify({'status': 'no data'})
+
+@app.route('/devices')
+def devices():
+    # Return all seen devices
+    return jsonify({'devices': list(connected_devices.values())})
 
 def run_dashboard():
     app.run(host='0.0.0.0', port=5000)
