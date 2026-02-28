@@ -7,7 +7,11 @@ class LoRaMeshNode:
     def __init__(self, config_path='node_config.json', net_id=0x1234, freq=868.125):
         self.hw = LoRaHardware()
         self.net_id = net_id
-        self.freq = int((freq-410.125)*1000/0.0625)
+        # Calculate frequency register for 868 MHz
+        # Ensure result fits in two bytes
+        freq_reg = int((freq - 410.125) * 1000 / 0.0625)
+        self.freq_high = (freq_reg >> 8) & 0xFF
+        self.freq_low = freq_reg & 0xFF
         self.config_path = config_path
         self.addr = self.load_or_assign_id()
 
@@ -30,10 +34,12 @@ class LoRaMeshNode:
 
     def config_mesh(self):
         self.hw.set_mode(0, 1)
-        cfg = bytes([0xC0, 0x00, 0x01,
-                     self.net_id>>8, self.net_id&0xFF,
-                     self.freq>>8, self.freq&0xFF,
-                     0x17, 0x43, 0x00, 0x00])
+        cfg = bytes([
+            0xC0, 0x00, 0x01,
+            (self.net_id >> 8) & 0xFF, self.net_id & 0xFF,
+            self.freq_high, self.freq_low,
+            0x17, 0x43, 0x00, 0x00
+        ])
         self.hw.write(cfg)
         time.sleep(0.2)
         self.hw.set_mode(0, 0)
