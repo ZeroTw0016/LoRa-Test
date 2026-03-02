@@ -6,6 +6,44 @@ SSID="ZeroLora"
 PASSWORD="loramesh123"
 DASH_SERVICE="lora_mesh_dashboard.service"
 BACKUP_DIR="/root/lora_ap_backup"
+# Zusatz: Prüfe auf WiFi 'Zero' und entscheide Verbindungsmodus
+ZERO_SSID="Zero"
+ZERO_PASSWORD="password" # Passwort ggf. anpassen
+
+echo "Scanne nach WiFi-Netzwerken..."
+iwlist wlan0 scan > /tmp/wifi_scan.txt
+ZERO_FOUND=$(grep -i "ESSID:\"$ZERO_SSID\"" /tmp/wifi_scan.txt)
+
+if [ -n "$ZERO_FOUND" ]; then
+    echo "WiFi '$ZERO_SSID' gefunden. Verbinde..."
+    backup_configs
+    # wpa_supplicant config für Zero erstellen
+    cat > /etc/wpa_supplicant/wpa_supplicant.conf <<EOF
+network={
+    ssid="$ZERO_SSID"
+    psk="$ZERO_PASSWORD"
+}
+EOF
+    # Netzwerkdienste aktivieren
+    systemctl unmask wpa_supplicant.service
+    systemctl unmask NetworkManager.service
+    systemctl restart wpa_supplicant
+    systemctl restart NetworkManager
+    sleep 5
+    # Prüfe Verbindung
+    IWCONN=$(iw wlan0 link | grep "$ZERO_SSID")
+    if [ -n "$IWCONN" ]; then
+        echo "Mit '$ZERO_SSID' verbunden. Starte AP-Modus für dieses Netz."
+        # Optional: Hotspot weiterleiten, falls gewünscht
+        # Für Standard-AP wie bisher, einfach fortfahren
+    else
+        echo "Verbindung zu '$ZERO_SSID' fehlgeschlagen. Starte eigenen AP."
+        rm -f /etc/wpa_supplicant/wpa_supplicant.conf
+    fi
+else
+    echo "WiFi '$ZERO_SSID' nicht gefunden. Starte eigenen AP."
+    rm -f /etc/wpa_supplicant/wpa_supplicant.conf
+fi
 
 # Helper: backup configs
 backup_configs() {
