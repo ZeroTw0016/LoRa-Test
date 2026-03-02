@@ -6,13 +6,75 @@ SSID="ZeroLora"
 PASSWORD="loramesh123"
 DASH_SERVICE="lora_mesh_dashboard.service"
 BACKUP_DIR="/root/lora_ap_backup"
+# Helper: backup configs
+backup_configs() {
+    mkdir -p "$BACKUP_DIR"
+    cp /etc/dhcpcd.conf "$BACKUP_DIR/dhcpcd.conf.bak"
+    cp /etc/dnsmasq.conf "$BACKUP_DIR/dnsmasq.conf.bak"
+    cp /etc/hostapd/hostapd.conf "$BACKUP_DIR/hostapd.conf.bak"
+    [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && cp /etc/wpa_supplicant/wpa_supplicant.conf "$BACKUP_DIR/wpa_supplicant.conf.bak"
+    [ -f /etc/wpa_supplicant/wpa_supplicant-wlan0.conf ] && cp /etc/wpa_supplicant/wpa_supplicant-wlan0.conf "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak"
+    [ -f /boot/wpa_supplicant.conf ] && cp /boot/wpa_supplicant.conf "$BACKUP_DIR/boot_wpa_supplicant.conf.bak"
+}
+
+# Helper: restore configs
+restore_configs() {
+    echo "Restoring previous network configuration..."
+    cp "$BACKUP_DIR/dhcpcd.conf.bak" /etc/dhcpcd.conf
+    cp "$BACKUP_DIR/dnsmasq.conf.bak" /etc/dnsmasq.conf
+    cp "$BACKUP_DIR/hostapd.conf.bak" /etc/hostapd/hostapd.conf
+    [ -f "$BACKUP_DIR/wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant.conf.bak" /etc/wpa_supplicant/wpa_supplicant.conf
+    [ -f "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+    [ -f "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" /boot/wpa_supplicant.conf
+}
+
 # Zusatz: Prüfe auf WiFi 'Zero' und entscheide Verbindungsmodus
 ZERO_SSID="Zero"
 ZERO_PASSWORD="password" # Passwort ggf. anpassen
 
 echo "Scanne nach WiFi-Netzwerken..."
-iwlist wlan0 scan > /tmp/wifi_scan.txt
+sudo iwlist wlan0 scan > /tmp/wifi_scan.txt
 ZERO_FOUND=$(grep -i "ESSID:\"$ZERO_SSID\"" /tmp/wifi_scan.txt)
+
+# Helper: backup configs
+backup_configs() {
+    mkdir -p "$BACKUP_DIR"
+    cp /etc/dhcpcd.conf "$BACKUP_DIR/dhcpcd.conf.bak"
+    cp /etc/dnsmasq.conf "$BACKUP_DIR/dnsmasq.conf.bak"
+    cp /etc/hostapd/hostapd.conf "$BACKUP_DIR/hostapd.conf.bak"
+    [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && cp /etc/wpa_supplicant/wpa_supplicant.conf "$BACKUP_DIR/wpa_supplicant.conf.bak"
+    [ -f /etc/wpa_supplicant/wpa_supplicant-wlan0.conf ] && cp /etc/wpa_supplicant/wpa_supplicant-wlan0.conf "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak"
+    [ -f /boot/wpa_supplicant.conf ] && cp /boot/wpa_supplicant.conf "$BACKUP_DIR/boot_wpa_supplicant.conf.bak"
+}
+
+# Helper: restore configs
+restore_configs() {
+    echo "Restoring previous network configuration..."
+    cp "$BACKUP_DIR/dhcpcd.conf.bak" /etc/dhcpcd.conf
+    cp "$BACKUP_DIR/dnsmasq.conf.bak" /etc/dnsmasq.conf
+    cp "$BACKUP_DIR/hostapd.conf.bak" /etc/hostapd/hostapd.conf
+    [ -f "$BACKUP_DIR/wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant.conf.bak" /etc/wpa_supplicant/wpa_supplicant.conf
+    [ -f "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+    [ -f "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" /boot/wpa_supplicant.conf
+}
+
+# 2. Installations (internet required)
+echo "Installing dependencies..."
+apt-get install -y hostapd dnsmasq python3-pip
+pip3 install flask pyserial --break-system-packages
+
+# 3. Service config (dashboard)
+
+echo "Configuring dashboard service..."
+
+cp "$DASH_SERVICE" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable "$DASH_SERVICE"
+systemctl restart "$DASH_SERVICE"
+sleep 2
+echo "Prüfe Status des Dashboard-Service:"
+systemctl status "$DASH_SERVICE" --no-pager
+
 
 if [ -n "$ZERO_FOUND" ]; then
     echo "WiFi '$ZERO_SSID' gefunden. Verbinde..."
@@ -45,41 +107,6 @@ else
     rm -f /etc/wpa_supplicant/wpa_supplicant.conf
 fi
 
-# Helper: backup configs
-backup_configs() {
-    mkdir -p "$BACKUP_DIR"
-    cp /etc/dhcpcd.conf "$BACKUP_DIR/dhcpcd.conf.bak"
-    cp /etc/dnsmasq.conf "$BACKUP_DIR/dnsmasq.conf.bak"
-    cp /etc/hostapd/hostapd.conf "$BACKUP_DIR/hostapd.conf.bak"
-    [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && cp /etc/wpa_supplicant/wpa_supplicant.conf "$BACKUP_DIR/wpa_supplicant.conf.bak"
-    [ -f /etc/wpa_supplicant/wpa_supplicant-wlan0.conf ] && cp /etc/wpa_supplicant/wpa_supplicant-wlan0.conf "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak"
-    [ -f /boot/wpa_supplicant.conf ] && cp /boot/wpa_supplicant.conf "$BACKUP_DIR/boot_wpa_supplicant.conf.bak"
-}
-
-# Helper: restore configs
-restore_configs() {
-    echo "Restoring previous network configuration..."
-    cp "$BACKUP_DIR/dhcpcd.conf.bak" /etc/dhcpcd.conf
-    cp "$BACKUP_DIR/dnsmasq.conf.bak" /etc/dnsmasq.conf
-    cp "$BACKUP_DIR/hostapd.conf.bak" /etc/hostapd/hostapd.conf
-    [ -f "$BACKUP_DIR/wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant.conf.bak" /etc/wpa_supplicant/wpa_supplicant.conf
-    [ -f "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-    [ -f "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" ] && cp "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" /boot/wpa_supplicant.conf
-}
-
-# 2. Installations (internet required)
-echo "Updating and installing dependencies..."
-apt-get update
-apt-get install -y hostapd dnsmasq python3-pip
-pip3 install flask pyserial --break-system-packages
-
-# 3. Service config (dashboard)
-
-echo "Configuring dashboard service..."
-cp "$DASH_SERVICE" /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable "$DASH_SERVICE"
-systemctl start "$DASH_SERVICE"
 
 # ---
 # Automatische Einrichtung des lora_wifi_check.service für WiFi-Check bei jedem Gerätestart
