@@ -10,7 +10,7 @@
 
 ### One-line install (run as root):
 ```bash
-git clone https://github.com/yourusername/LoRa-Test.git && cd LoRa-Test && sudo bash setup_wifi_ap.sh && sudo reboot
+git clone https://github.com/ZeroTw0016/LoRa-Test.git && cd LoRa-Test && sudo bash setup_wifi_ap.sh && sudo reboot
 ```
 
 ### Details
