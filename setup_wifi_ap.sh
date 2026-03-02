@@ -74,11 +74,24 @@ apt-get install -y hostapd dnsmasq python3-pip
 pip3 install flask pyserial --break-system-packages
 
 # 3. Service config (dashboard)
+
 echo "Configuring dashboard service..."
 cp "$DASH_SERVICE" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable "$DASH_SERVICE"
 systemctl start "$DASH_SERVICE"
+
+# ---
+# Automatische Einrichtung des lora_wifi_check.service für WiFi-Check bei jedem Gerätestart
+echo "Richte lora_wifi_check.service für automatischen WiFi-Check ein..."
+if [ -f "$(dirname "$0")/lora_wifi_check.service" ]; then
+    cp "$(dirname "$0")/lora_wifi_check.service" /etc/systemd/system/lora_wifi_check.service
+    systemctl daemon-reload
+    systemctl enable lora_wifi_check.service
+    echo "Service lora_wifi_check.service wurde eingerichtet und aktiviert."
+else
+    echo "Warnung: lora_wifi_check.service nicht gefunden. Bitte manuell kopieren."
+fi
 
 # 4. WiFi AP config (switch from managed to AP mode)
 echo "Configuring WiFi AP..."

@@ -1,0 +1,11 @@
+[Unit]
+Description=LoRa Mesh WiFi Check & AP Setup
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/zero/LoRa-Test/setup_wifi_ap.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
