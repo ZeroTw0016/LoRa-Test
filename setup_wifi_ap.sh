@@ -182,7 +182,16 @@ AP_OK=$(iw dev wlan0 info | grep -q 'type AP' && echo yes || echo no)
 DNSMASQ_OK=$(systemctl is-active dnsmasq)
 if [ "$AP_OK" = "yes" ] && [ "$DNSMASQ_OK" = "active" ]; then
     echo "AP and DHCP are running. Setup complete. Rebooting..."
-    reboot
+    echo "AP and DHCP sind aktiv. Setup abgeschlossen. Reboot folgt..."
+    touch /tmp/dashboard_check_after_reboot.sh
+    cat > /tmp/dashboard_check_after_reboot.sh <<EOF
+#!/bin/bash
+sleep 30
+systemctl status lora_mesh_dashboard.service --no-pager > /tmp/dashboard_status_after_reboot.txt
+EOF
+chmod +x /tmp/dashboard_check_after_reboot.sh
+at now + 1 minute -f /tmp/dashboard_check_after_reboot.sh
+reboot
 else
     echo "AP or DHCP failed. Restoring previous config and rebooting..."
     restore_configs
@@ -190,5 +199,13 @@ else
     systemctl restart dnsmasq
     systemctl restart hostapd
     sleep 3
-    reboot
+    touch /tmp/dashboard_check_after_reboot.sh
+    cat > /tmp/dashboard_check_after_reboot.sh <<EOF
+#!/bin/bash
+sleep 30
+systemctl status lora_mesh_dashboard.service --no-pager > /tmp/dashboard_status_after_reboot.txt
+EOF
+chmod +x /tmp/dashboard_check_after_reboot.sh
+at now + 1 minute -f /tmp/dashboard_check_after_reboot.sh
+reboot
 fi
