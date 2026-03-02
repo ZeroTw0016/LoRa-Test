@@ -149,7 +149,7 @@ systemctl start hostapd
 systemctl start dnsmasq
 
 # 5. Status check and fallback
-sleep 5
+
 echo "Checking AP and DHCP status..."
 AP_OK=$(iw dev wlan0 info | grep -q 'type AP' && echo yes || echo no)
 DNSMASQ_OK=$(systemctl is-active dnsmasq)
