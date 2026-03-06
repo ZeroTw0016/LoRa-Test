@@ -93,8 +93,11 @@ EOF
     sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
     cat > /etc/dnsmasq.conf <<EOF
+bind-interfaces
 interface=wlan0
-dhcp-range=192.168.50.2,192.168.50.20,255.255.255.0,24h
+dhcp-range=192.168.50.50,192.168.50.150,255.255.255.0,24h
+dhcp-option=3,192.168.50.1
+dhcp-option=6,8.8.8.8,8.8.4.4
 EOF
 
     systemctl unmask hostapd
@@ -265,8 +268,11 @@ EOF
 sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
 cat > /etc/dnsmasq.conf <<EOF
+bind-interfaces
 interface=wlan0
-dhcp-range=192.168.50.2,192.168.50.20,255.255.255.0,24h
+dhcp-range=192.168.50.50,192.168.50.150,255.255.255.0,24h
+dhcp-option=3,192.168.50.1
+dhcp-option=6,8.8.8.8,8.8.4.4
 EOF
 
 systemctl unmask hostapd
