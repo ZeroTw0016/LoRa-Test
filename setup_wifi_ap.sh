@@ -115,9 +115,18 @@ EOF
     systemctl unmask hostapd
     systemctl enable hostapd
     systemctl restart hostapd
-    sleep 2
+    # Warten bis hostapd den AP-Modus aktiv hat (kann wlan0-IP entfernen)
+    for i in $(seq 1 20); do
+        iw dev wlan0 info 2>/dev/null | grep -q 'type AP' && break
+        sleep 1
+    done
+    # IP nach hostapd-Start erneut sicherstellen
+    ip addr show wlan0 | grep -q '192.168.50.1' || \
+        ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
+    ip link set wlan0 up
+    sleep 1
     systemctl restart dnsmasq
-    sleep 3
+    sleep 2
 
     AP_OK=$(iw dev wlan0 info 2>/dev/null | grep -q 'type AP' && echo yes || echo no)
     DNSMASQ_OK=$(systemctl is-active dnsmasq 2>/dev/null || echo inactive)
@@ -314,7 +323,16 @@ EOF
 systemctl unmask hostapd
 systemctl enable hostapd
 systemctl restart hostapd
-sleep 2
+# Warten bis hostapd den AP-Modus aktiv hat (hostapd kann wlan0-IP entfernen)
+for i in $(seq 1 20); do
+    iw dev wlan0 info 2>/dev/null | grep -q 'type AP' && break
+    sleep 1
+done
+# IP nach hostapd-Start erneut sicherstellen
+ip addr show wlan0 | grep -q '192.168.50.1' || \
+    ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
+ip link set wlan0 up
+sleep 1
 systemctl restart dnsmasq
 systemctl restart lora_mesh_dashboard.service 2>/dev/null || true
 echo "Eigener Hotspot '$SSID' gestartet."
