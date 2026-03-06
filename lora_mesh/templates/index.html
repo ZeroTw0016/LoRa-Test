@@ -1,9 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LoRa Mesh Dashboard</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -11,9 +13,9 @@
             color: #e0e0e0;
         }
         .container {
-            max-width: 600px;
+            max-width: 640px;
             margin: auto;
-            padding: 10px;
+            padding: 12px;
         }
         .card {
             background: #23272f;
@@ -31,25 +33,25 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover {
-            background: #1a6fb3;
-        }
-        input {
+        button:hover { background: #1a6fb3; }
+        button.danger { background: #c0392b; }
+        button.danger:hover { background: #922b21; }
+        button.success { background: #27ae60; }
+        button.success:hover { background: #1e8449; }
+        input, select {
             background: #181a20;
             color: #e0e0e0;
             border: 1px solid #444;
             border-radius: 4px;
-            padding: 6px;
+            padding: 6px 8px;
+            width: 100%;
         }
-        h1, h2 {
-            color: #2d8cf0;
-        }
-        #devicesList {
-            margin-top: 10px;
-            background: #23272f;
-            border-radius: 6px;
-            padding: 10px;
-        }
+        input:focus, select:focus { outline: 2px solid #2d8cf0; }
+        h1, h2 { color: #2d8cf0; margin-top: 0; }
+        label { display: block; margin: 10px 0 3px; font-size: 0.85em; color: #aaa; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .row input { flex: 1; }
+        #devicesList { margin-top: 10px; }
         .chat {
             background: #181a20;
             border-radius: 8px;
@@ -74,100 +76,279 @@
             align-items: flex-end;
         }
         .msg.them {
-            background: #23272f;
+            background: #2c2f3a;
             color: #e0e0e0;
             margin-right: auto;
             align-items: flex-start;
         }
-        .msg .meta {
-            font-size: 0.8em;
+        .msg .meta { font-size: 0.78em; color: #bbb; margin-top: 2px; }
+        .status { margin-top: 8px; font-size: 0.88em; min-height: 1.2em; }
+        .status.ok { color: #2ecc71; }
+        .status.err { color: #e74c3c; }
+        .cfg-section { border-top: 1px solid #333; margin-top: 14px; padding-top: 14px; }
+        .cfg-section h3 { color: #7fb3f5; margin: 0 0 8px; font-size: 1em; }
+        .cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+        @media (max-width: 520px) {
+            .cfg-grid { grid-template-columns: 1fr; }
+            .container { padding: 6px; }
+        }
+        .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab-btn {
+            background: #2c2f3a;
+            border: 1px solid #444;
             color: #aaa;
-            margin-top: 2px;
+            border-radius: 4px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.15s;
         }
-        @media (max-width: 700px) {
-            .container { max-width: 100vw; padding: 2vw; }
-            .card { padding: 10px; }
-            .chat { max-height: 40vh; }
-        }
+        .tab-btn.active { background: #2d8cf0; color: #fff; border-color: #2d8cf0; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LoRa Mesh Dashboard</h1>
-        <div class="card">
-            <h2>Chat</h2>
-            <div class="chat" id="chatBox">Loading...</div>
-            <form id="sendForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <input type="text" name="target" value="FFFF" style="width:90px" placeholder="Target (hex)" />
-                <input type="text" name="message" style="flex:1" placeholder="Type a message..." />
-                <button type="submit">Send</button>
-            </form>
-            <div id="sendStatus"></div>
-        </div>
-        <div class="card">
-            <h2>Connected Devices</h2>
-            <button onclick="fetchDevices()">Refresh</button>
-            <div id="devicesList">Loading...</div>
-        </div>
-        <div class="card">
-            <h2>System</h2>
-            <button id="updateBtn">Update & Reboot</button>
-            <div id="updateStatus"></div>
-        </div>
-        <div class="card">
-            <h2>Received Messages</h2>
-            <button onclick="fetchRecv()">Refresh</button>
-            <div id="recvData"></div>
-        </div>
+<div class="container">
+    <h1>&#128225; LoRa Mesh Dashboard</h1>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('tab-chat')">Chat</button>
+        <button class="tab-btn" onclick="showTab('tab-devices')">Geraete</button>
+        <button class="tab-btn" onclick="showTab('tab-config')">Konfiguration</button>
+        <button class="tab-btn" onclick="showTab('tab-system')">System</button>
     </div>
-    <script>
-        document.getElementById('sendForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const form = new FormData(this);
-            const res = await fetch('/send', { method: 'POST', body: form });
-            const data = await res.json();
-            document.getElementById('sendStatus').innerText = data.status;
-            await fetchHistory();
-        };
-        document.getElementById('updateBtn').onclick = async function() {
-            document.getElementById('updateStatus').innerText = 'Updating and rebooting...';
-            const res = await fetch('/update', { method: 'POST' });
-            const data = await res.json();
-            document.getElementById('updateStatus').innerText = data.status;
-        };
-        async function fetchHistory() {
-            const res = await fetch('/history');
-            const data = await res.json();
-            const chatBox = document.getElementById('chatBox');
-            if (Array.isArray(data.messages)) {
-                chatBox.innerHTML = data.messages.map(msg => `
-                    <div class="msg ${msg.outgoing ? 'me' : 'them'}">
-                        <div>${msg.payload}</div>
-                        <div class="meta">${msg.outgoing ? 'To ' + msg.to : 'From ' + msg.from} • ${msg.timestamp}${msg.rssi !== null ? ' • RSSI: ' + msg.rssi : ''}</div>
-                    </div>
-                `).join('');
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } else {
-                chatBox.innerText = 'No messages.';
-            }
+
+    <!-- ── Chat ── -->
+    <div id="tab-chat" class="tab-content active card">
+        <h2>Chat</h2>
+        <div class="chat" id="chatBox">Lade...</div>
+        <form id="sendForm" class="row" style="margin-top:6px">
+            <input type="text" name="target" value="FFFF" style="width:90px;flex:none" placeholder="Ziel (hex)" />
+            <input type="text" name="message" style="flex:1" placeholder="Nachricht..." />
+            <button type="submit">Senden</button>
+        </form>
+        <div class="status" id="sendStatus"></div>
+    </div>
+
+    <!-- ── Geraete ── -->
+    <div id="tab-devices" class="tab-content card">
+        <h2>Verbundene Geraete</h2>
+        <button onclick="fetchDevices()">Aktualisieren</button>
+        <div id="devicesList" style="margin-top:10px">Lade...</div>
+    </div>
+
+    <!-- ── Konfiguration ── -->
+    <div id="tab-config" class="tab-content card">
+        <h2>Konfiguration</h2>
+        <p style="font-size:0.85em;color:#aaa;margin-top:0">
+            Aenderungen werden sofort gespeichert. Fuer WiFi-Aenderungen danach neu starten.
+        </p>
+
+        <div class="cfg-section">
+            <h3>&#128246; Eigener Hotspot (AP-Modus)</h3>
+            <div class="cfg-grid">
+                <div>
+                    <label for="ap_ssid">SSID</label>
+                    <input id="ap_ssid" type="text" placeholder="ZeroLora" />
+                </div>
+                <div>
+                    <label for="ap_password">Passwort</label>
+                    <input id="ap_password" type="text" placeholder="loramesh123" />
+                </div>
+            </div>
+        </div>
+
+        <div class="cfg-section">
+            <h3>&#128225; Client-Verbindung (Hotspot beitreten)</h3>
+            <div class="cfg-grid">
+                <div>
+                    <label for="client_ssid">Hotspot-SSID</label>
+                    <input id="client_ssid" type="text" placeholder="Zero" />
+                </div>
+                <div>
+                    <label for="client_password">Hotspot-Passwort</label>
+                    <input id="client_password" type="text" placeholder="password" />
+                </div>
+            </div>
+        </div>
+
+        <div class="cfg-section">
+            <h3>&#128225; LoRa-Einstellungen</h3>
+            <div class="cfg-grid">
+                <div>
+                    <label for="lora_freq">Frequenz (MHz)</label>
+                    <input id="lora_freq" type="number" step="0.001" placeholder="868.125" />
+                </div>
+                <div>
+                    <label for="lora_channel">Kanal</label>
+                    <input id="lora_channel" type="number" min="1" max="13" placeholder="7" />
+                </div>
+                <div>
+                    <label for="lora_net_id">Netzwerk-ID (hex)</label>
+                    <input id="lora_net_id" type="text" placeholder="0x1234" />
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="success" onclick="saveConfig()">Speichern</button>
+            <button onclick="loadConfig()">Verwerfen / Neu laden</button>
+        </div>
+        <div class="status" id="cfgStatus"></div>
+    </div>
+
+    <!-- ── System ── -->
+    <div id="tab-system" class="tab-content card">
+        <h2>System</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="doReboot()">Neu starten</button>
+            <button class="danger" onclick="doUpdate()">Update &amp; Neu starten</button>
+        </div>
+        <div class="status" id="sysStatus"></div>
+    </div>
+</div>
+
+<script>
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const idx = ['tab-chat','tab-devices','tab-config','tab-system'].indexOf(id);
+    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+document.getElementById('sendForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const form = new FormData(this);
+    const res = await fetch('/send', { method: 'POST', body: form });
+    const data = await res.json();
+    const el = document.getElementById('sendStatus');
+    el.textContent = data.status === 'sent' ? 'Gesendet.' : data.status;
+    el.className = 'status ' + (data.status === 'sent' ? 'ok' : 'err');
+    await fetchHistory();
+};
+
+async function fetchHistory() {
+    const res = await fetch('/history');
+    const data = await res.json();
+    const chatBox = document.getElementById('chatBox');
+    if (Array.isArray(data.messages) && data.messages.length) {
+        chatBox.innerHTML = data.messages.map(msg => `
+            <div class="msg ${msg.outgoing ? 'me' : 'them'}">
+                <div>${escHtml(msg.payload)}</div>
+                <div class="meta">${msg.outgoing ? 'An ' + msg.to : 'Von ' + msg.from} &bull; ${msg.timestamp}${msg.rssi != null ? ' &bull; RSSI: ' + msg.rssi : ''}</div>
+            </div>`).join('');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else {
+        chatBox.innerHTML = '<span style="color:#666">Keine Nachrichten.</span>';
+    }
+}
+
+async function fetchRecv() {
+    await fetch('/recv');
+    await fetchHistory();
+}
+
+// ── Geraete ──────────────────────────────────────────────────────────────────
+async function fetchDevices() {
+    const res = await fetch('/devices');
+    const data = await res.json();
+    const el = document.getElementById('devicesList');
+    if (Array.isArray(data.devices) && data.devices.length) {
+        el.innerHTML = data.devices.map(d =>
+            `<div style="padding:6px 0;border-bottom:1px solid #333">
+                Adresse: <b>${d.addr}</b> &nbsp;|&nbsp; RSSI: ${d.rssi}
+            </div>`).join('');
+    } else {
+        el.innerHTML = '<span style="color:#666">Keine Geraete gefunden.</span>';
+    }
+}
+
+// ── Konfiguration ─────────────────────────────────────────────────────────────
+async function loadConfig() {
+    const s = document.getElementById('cfgStatus');
+    s.textContent = ''; s.className = 'status';
+    try {
+        const res = await fetch('/config');
+        const d = await res.json();
+        document.getElementById('ap_ssid').value       = d.ap_ssid       ?? '';
+        document.getElementById('ap_password').value   = d.ap_password   ?? '';
+        document.getElementById('client_ssid').value   = d.client_ssid   ?? '';
+        document.getElementById('client_password').value = d.client_password ?? '';
+        document.getElementById('lora_freq').value     = d.lora_freq     ?? '';
+        document.getElementById('lora_channel').value  = d.lora_channel  ?? '';
+        document.getElementById('lora_net_id').value   = d.lora_net_id   ?? '';
+        s.textContent = 'Geladen.'; s.className = 'status ok';
+        setTimeout(() => { s.textContent = ''; }, 2000);
+    } catch(e) {
+        s.textContent = 'Fehler: ' + e; s.className = 'status err';
+    }
+}
+
+async function saveConfig() {
+    const s = document.getElementById('cfgStatus');
+    s.textContent = 'Speichere...'; s.className = 'status';
+    const payload = {
+        ap_ssid:         document.getElementById('ap_ssid').value.trim(),
+        ap_password:     document.getElementById('ap_password').value.trim(),
+        client_ssid:     document.getElementById('client_ssid').value.trim(),
+        client_password: document.getElementById('client_password').value.trim(),
+        lora_freq:       parseFloat(document.getElementById('lora_freq').value) || 868.125,
+        lora_channel:    parseInt(document.getElementById('lora_channel').value) || 7,
+        lora_net_id:     document.getElementById('lora_net_id').value.trim()
+    };
+    // Remove empty strings
+    Object.keys(payload).forEach(k => { if (payload[k] === '') delete payload[k]; });
+    try {
+        const res = await fetch('/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'saved') {
+            s.textContent = 'Gespeichert! WiFi-Aenderungen erst nach Neustart aktiv.';
+            s.className = 'status ok';
+        } else {
+            s.textContent = 'Fehler: ' + (data.message || JSON.stringify(data));
+            s.className = 'status err';
         }
-        async function fetchRecv() {
-            await fetch('/recv');
-            await fetchHistory();
-        }
-        async function fetchDevices() {
-            const res = await fetch('/devices');
-            const data = await res.json();
-            if (Array.isArray(data.devices)) {
-                document.getElementById('devicesList').innerHTML = data.devices.length ?
-                    data.devices.map(d => `<div>Addr: <b>${d.addr}</b> | RSSI: ${d.rssi}</div>`).join('') : 'No devices.';
-            } else {
-                document.getElementById('devicesList').innerText = 'No devices.';
-            }
-        }
-        fetchDevices();
-        fetchHistory();
-        setInterval(fetchRecv, 2000);
-    </script>
+    } catch(e) {
+        s.textContent = 'Fehler: ' + e; s.className = 'status err';
+    }
+}
+
+// ── System ────────────────────────────────────────────────────────────────────
+async function doReboot() {
+    if (!confirm('Wirklich neu starten?')) return;
+    document.getElementById('sysStatus').textContent = 'Starte neu...';
+    document.getElementById('sysStatus').className = 'status';
+    await fetch('/reboot', { method: 'POST' });
+}
+
+async function doUpdate() {
+    if (!confirm('Update ausfuehren und neu starten?')) return;
+    document.getElementById('sysStatus').textContent = 'Update laeuft...';
+    document.getElementById('sysStatus').className = 'status';
+    const res = await fetch('/update', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('sysStatus').textContent = data.status;
+}
+
+// ── Hilfsfunktionen ───────────────────────────────────────────────────────────
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+fetchDevices();
+fetchHistory();
+loadConfig();
+setInterval(fetchRecv, 2000);
+setInterval(fetchDevices, 10000);
+</script>
 </body>
 </html>
