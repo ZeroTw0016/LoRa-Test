@@ -174,6 +174,16 @@ echo "Installiere Abhaengigkeiten..."
 apt-get install -y hostapd dnsmasq python3-pip
 pip3 install flask pyserial --break-system-packages
 
+# Benutzer zero zu den benoetigen Gruppen hinzufuegen (GPIO, Serial, sudo-Befehle)
+usermod -aG gpio,dialout,tty zero 2>/dev/null || true
+
+# sudoers-Eintrag fuer zero: nur reboot und das Setup-Script erlaubt
+SUDOERS_FILE="/etc/sudoers.d/zero-lora"
+cat > "$SUDOERS_FILE" <<'SUDOERS'
+zero ALL=(ALL) NOPASSWD: /sbin/reboot, /usr/sbin/reboot, /bin/bash /home/zero/LoRa-Test/setup_wifi_ap.sh
+SUDOERS
+chmod 0440 "$SUDOERS_FILE"
+
 # 4. Dashboard-Service
 echo "Konfiguriere Dashboard-Service..."
 cp "$SCRIPT_DIR/$DASH_SERVICE" /etc/systemd/system/

@@ -1,15 +1,20 @@
 [Unit]
 Description=LoRa Mesh Dashboard
-After=network-online.target lora_wifi_check.service
-Wants=network-online.target
+After=network-online.target lora_wifi_check.service hostapd.service dnsmasq.service
+Wants=network-online.target hostapd.service dnsmasq.service
 Requires=lora_wifi_check.service
 
 [Service]
+ExecStartPre=/bin/bash -c 'until [ -e /dev/ttyS0 ]; do sleep 1; done'
 ExecStart=/usr/bin/python3 -m lora_mesh.dashboard
 WorkingDirectory=/home/zero/LoRa-Test
 Restart=always
+RestartSec=5
 User=zero
+SupplementaryGroups=gpio dialout tty
 Environment=LORA_SERIAL_PORT=/dev/ttyS0
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
