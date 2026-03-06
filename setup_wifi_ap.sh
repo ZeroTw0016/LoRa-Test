@@ -62,9 +62,9 @@ setup_ap_mode() {
     systemctl mask NetworkManager.service 2>/dev/null || true
     nmcli device disconnect wlan0 2>/dev/null || true
     iw dev wlan0 disconnect       2>/dev/null || true
-    ifconfig wlan0 down
+    ifconfig wlan0 down 2>/dev/null || true
     sleep 1
-    ifconfig wlan0 up
+    ifconfig wlan0 up 2>/dev/null || true
 
     sed -i '/^interface wlan0$/,/^nohook wpa_supplicant$/d' /etc/dhcpcd.conf
     cat >> /etc/dhcpcd.conf <<EOC
@@ -73,6 +73,15 @@ static ip_address=192.168.50.1/24
 nohook wpa_supplicant
 EOC
     systemctl restart dhcpcd 2>/dev/null || service dhcpcd restart 2>/dev/null || pkill -HUP dhcpcd || true
+    # IP sofort erzwingen – dhcpcd kann zu langsam sein
+    ip addr flush dev wlan0 2>/dev/null || true
+    ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
+    ip link set wlan0 up
+    # Warten bis IP tatsaechlich gesetzt ist
+    for i in $(seq 1 15); do
+        ip addr show wlan0 | grep -q '192.168.50.1' && break
+        sleep 1
+    done
 
     mkdir -p /etc/hostapd
     cat > /etc/hostapd/hostapd.conf <<EOF
@@ -90,8 +99,11 @@ wpa_passphrase=$PASSWORD
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 EOF
-    sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+    sed -i 's|.*DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
+    # dnsmasq.d leeren – dort koennten alte Configs das DHCP-Range ueberschreiben
+    systemctl stop dnsmasq 2>/dev/null || true
+    rm -f /etc/dnsmasq.d/*.conf 2>/dev/null || true
     cat > /etc/dnsmasq.conf <<EOF
 bind-interfaces
 interface=wlan0
@@ -103,6 +115,7 @@ EOF
     systemctl unmask hostapd
     systemctl enable hostapd
     systemctl restart hostapd
+    sleep 2
     systemctl restart dnsmasq
     sleep 3
 
@@ -239,7 +252,7 @@ systemctl mask wpa_supplicant.service 2>/dev/null || true
 systemctl mask NetworkManager.service 2>/dev/null || true
 nmcli device disconnect wlan0 2>/dev/null || true
 iw dev wlan0 disconnect       2>/dev/null || true
-ifconfig wlan0 down; sleep 1; ifconfig wlan0 up
+ifconfig wlan0 down 2>/dev/null || true; sleep 1; ifconfig wlan0 up 2>/dev/null || true
 
 sed -i '/^interface wlan0$/,/^nohook wpa_supplicant$/d' /etc/dhcpcd.conf
 cat >> /etc/dhcpcd.conf <<EOC
@@ -248,6 +261,15 @@ static ip_address=192.168.50.1/24
 nohook wpa_supplicant
 EOC
 systemctl restart dhcpcd 2>/dev/null || true
+# IP sofort erzwingen – dhcpcd kann zu langsam sein
+ip addr flush dev wlan0 2>/dev/null || true
+ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
+ip link set wlan0 up
+# Warten bis IP tatsaechlich gesetzt ist
+for i in $(seq 1 15); do
+    ip addr show wlan0 | grep -q '192.168.50.1' && break
+    sleep 1
+done
 
 mkdir -p /etc/hostapd
 cat > /etc/hostapd/hostapd.conf <<EOF
@@ -265,8 +287,11 @@ wpa_passphrase=$PASSWORD
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 EOF
-sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+sed -i 's|.*DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
+# dnsmasq.d leeren – dort koennten alte Configs das DHCP-Range ueberschreiben
+systemctl stop dnsmasq 2>/dev/null || true
+rm -f /etc/dnsmasq.d/*.conf 2>/dev/null || true
 cat > /etc/dnsmasq.conf <<EOF
 bind-interfaces
 interface=wlan0
@@ -278,6 +303,7 @@ EOF
 systemctl unmask hostapd
 systemctl enable hostapd
 systemctl restart hostapd
+sleep 2
 systemctl restart dnsmasq
 echo "Eigener Hotspot '$SSID' gestartet."
 WIFICHECK
