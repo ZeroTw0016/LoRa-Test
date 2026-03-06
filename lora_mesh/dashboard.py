@@ -47,7 +47,6 @@ def send():
     target = int(request.form['target'], 16)
     msg = request.form['message'].encode()
     node.send_mesh(target, msg)
-    # Add to history as outgoing message
     message_history.append({
         'timestamp': time.strftime('%H:%M:%S'),
         'from': 'Me',
@@ -65,7 +64,6 @@ def recv():
         addr, payload, rssi = result
         connected_devices[addr] = {'addr': hex(addr), 'rssi': rssi}
         text = payload.decode(errors='ignore')
-        # Add to history as incoming message
         message_history.append({
             'timestamp': time.strftime('%H:%M:%S'),
             'from': hex(addr),
