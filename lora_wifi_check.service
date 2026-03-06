@@ -1,6 +1,7 @@
 [Unit]
 Description=LoRa Mesh WiFi Check & AP Setup
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
