@@ -1,6 +1,8 @@
 [Unit]
 Description=LoRa Mesh Dashboard
-After=network.target
+After=network-online.target lora_wifi_check.service
+Wants=network-online.target
+Requires=lora_wifi_check.service
 
 [Service]
 ExecStart=/usr/bin/python3 -m lora_mesh.dashboard
