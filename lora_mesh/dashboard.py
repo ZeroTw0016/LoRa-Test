@@ -81,7 +81,11 @@ def history():
     return jsonify({'messages': message_history[-50:]})
 
 def run_dashboard():
-    app.run(host='0.0.0.0', port=5000)
+    import socket
+    hostname = socket.gethostname()
+    host_ip = socket.gethostbyname(hostname)
+    print(f"Starte Dashboard auf Hostname {hostname} ({host_ip})")
+    app.run(host=host_ip, port=5000)
 
 if __name__ == '__main__':
     threading.Thread(target=run_dashboard).start()
