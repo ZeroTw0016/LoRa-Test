@@ -236,6 +236,7 @@ EOF
     IWCONN=$(iw wlan0 link 2>/dev/null | grep -i "$ZERO_SSID" || true)
     if [ -n "$IWCONN" ]; then
         echo "Verbunden mit '$ZERO_SSID'. Client-Modus aktiv."
+        systemctl restart lora_mesh_dashboard.service 2>/dev/null || true
         exit 0
     else
         echo "Verbindung fehlgeschlagen. Starte eigenen AP."
@@ -305,6 +306,7 @@ systemctl enable hostapd
 systemctl restart hostapd
 sleep 2
 systemctl restart dnsmasq
+systemctl restart lora_mesh_dashboard.service 2>/dev/null || true
 echo "Eigener Hotspot '$SSID' gestartet."
 WIFICHECK
 
