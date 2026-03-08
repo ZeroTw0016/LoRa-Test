@@ -20,15 +20,37 @@ CONFIG_DEFAULTS = {
     'client_ssid':    'Zero',
     'client_password':'password',
     'lora_channel':   7,
-    'lora_freq':      868.0,
+    'lora_freq':      868.125,
     'lora_net_id':    '0',
+    'tx_power':       22,         # dBm
+    'air_rate':       2.4,        # kbps
+    'encryption':     False,
+    'debug':          False,
 }
 
 def read_config():
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH) as f:
-            return json.load(f)
-    return dict(CONFIG_DEFAULTS)
+            cfg = json.load(f)
+    else:
+        cfg = dict(CONFIG_DEFAULTS)
+    # Automatisch lora_net_id aus Hostname setzen, falls nicht vorhanden oder leer
+    import socket, hashlib
+    changed = False
+    if not cfg.get('lora_net_id') or str(cfg.get('lora_net_id')).strip() in ('', '0', '0x0'):
+        hostname = socket.gethostname()
+        lora_id = hex(int(hashlib.sha256(hostname.encode()).hexdigest()[:4], 16))
+        cfg['lora_net_id'] = lora_id
+        changed = True
+    # Frequenz validieren: nur 868.0 oder 868.125 zulassen
+    freq = float(cfg.get('lora_freq', 868.125))
+    if abs(freq - 868.0) > 0.2 and abs(freq - 868.125) > 0.2:
+        cfg['lora_freq'] = 868.125
+        changed = True
+    if changed:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(cfg, f, indent=2)
+    return cfg
 
 def write_config(data):
     cfg = read_config()

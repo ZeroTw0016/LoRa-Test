@@ -5,5 +5,5 @@
   "client_password": "password",
   "lora_channel": 7,
   "lora_freq": 868.125,
-  "lora_net_id": "0x1234"
+  "lora_net_id": ""
 }
