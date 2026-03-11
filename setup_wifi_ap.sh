@@ -204,10 +204,8 @@ echo "Konfiguriere Dashboard-Service..."
 cp "$SCRIPT_DIR/$DASH_SERVICE" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable "$DASH_SERVICE"
-systemctl restart "$DASH_SERVICE"
-sleep 2
-echo "Status Dashboard-Service:"
-systemctl status "$DASH_SERVICE" --no-pager || true
+systemctl restart --no-block "$DASH_SERVICE" 2>/dev/null || systemctl start --no-block "$DASH_SERVICE" 2>/dev/null || true
+echo "Dashboard-Service gestartet (laeuft im Hintergrund)."
 
 # 5. lora_wifi_check.sh erstellen – liest beim Boot lora_config.json
 echo "Erstelle lora_wifi_check.sh..."
