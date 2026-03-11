@@ -69,8 +69,13 @@ def _init_node():
     return LoRaMeshNode(net_id=net_id, freq=freq)
 
 app  = Flask(__name__)
-node = _init_node()
-node.config_mesh()
+try:
+    node = _init_node()
+    node.config_mesh()
+except Exception as _hw_err:
+    import sys
+    print(f'WARNING: LoRa hardware init failed: {_hw_err}', file=sys.stderr)
+    node = None
 
 # In-memory state
 connected_devices = {}
@@ -118,7 +123,9 @@ def devices():
 
 @app.route('/mesh')
 def mesh_view():
-    """Full mesh network table including each node''s WiFi clients."""
+    """Full mesh network table including each node's WiFi clients."""
+    if node is None:
+        return jsonify({'mesh': []})
     return jsonify({'mesh': list(node.mesh_table.values())})
 
 @app.route('/history')
@@ -169,6 +176,9 @@ def _recv_loop():
     """Reads LoRa packets, handles handshake, buffers chat messages."""
     _last_beacon = time.time()
     while True:
+        if node is None:
+            time.sleep(5)
+            continue
         try:
             result = node.recv_mesh()
             if result:
@@ -206,10 +216,11 @@ def _recv_loop():
 
 # Start background thread and announce ourselves on the mesh
 threading.Thread(target=_recv_loop, daemon=True).start()
-try:
-    node.broadcast_join()
-except Exception:
-    pass
+if node is not None:
+    try:
+        node.broadcast_join()
+    except Exception:
+        pass
 
 
 def run_dashboard():
