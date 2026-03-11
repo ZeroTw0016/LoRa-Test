@@ -102,11 +102,17 @@ EOF
     sed -i 's|.*DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
     # dnsmasq.d leeren – dort koennten alte Configs das DHCP-Range ueberschreiben
+    systemctl stop systemd-resolved 2>/dev/null || true
+    systemctl mask systemd-resolved 2>/dev/null || true
     systemctl stop dnsmasq 2>/dev/null || true
     rm -f /etc/dnsmasq.d/*.conf 2>/dev/null || true
     cat > /etc/dnsmasq.conf <<EOF
 bind-interfaces
+listen-address=192.168.50.1
 interface=wlan0
+no-resolv
+server=8.8.8.8
+server=8.8.4.4
 dhcp-range=192.168.50.50,192.168.50.150,255.255.255.0,24h
 dhcp-option=3,192.168.50.1
 dhcp-option=6,8.8.8.8,8.8.4.4
@@ -310,11 +316,17 @@ EOF
 sed -i 's|.*DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
 # dnsmasq.d leeren – dort koennten alte Configs das DHCP-Range ueberschreiben
+systemctl stop systemd-resolved 2>/dev/null || true
+systemctl mask systemd-resolved 2>/dev/null || true
 systemctl stop dnsmasq 2>/dev/null || true
 rm -f /etc/dnsmasq.d/*.conf 2>/dev/null || true
 cat > /etc/dnsmasq.conf <<EOF
 bind-interfaces
+listen-address=192.168.50.1
 interface=wlan0
+no-resolv
+server=8.8.8.8
+server=8.8.4.4
 dhcp-range=192.168.50.50,192.168.50.150,255.255.255.0,24h
 dhcp-option=3,192.168.50.1
 dhcp-option=6,8.8.8.8,8.8.4.4
