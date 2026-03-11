@@ -1,8 +1,7 @@
 [Unit]
 Description=LoRa Mesh Dashboard
 After=network-online.target lora_wifi_check.service hostapd.service dnsmasq.service
-Wants=network-online.target hostapd.service dnsmasq.service
-Requires=lora_wifi_check.service
+Wants=network-online.target lora_wifi_check.service hostapd.service dnsmasq.service
 
 [Service]
 ExecStartPre=/bin/bash -c 'until [ -e /dev/ttyS0 ]; do sleep 1; done'
