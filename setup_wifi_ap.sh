@@ -1,6 +1,5 @@
 ﻿#!/bin/bash
 # LoRa Mesh Pi WiFi AP & Dashboard Setup
-set -e
 
 # 1. Variablen aus lora_config.json lesen (falls vorhanden)
 CONFIG="/home/zero/LoRa-Test/lora_config.json"
@@ -41,6 +40,13 @@ restore_configs() {
     [ -f "$BACKUP_DIR/wpa_supplicant.conf.bak" ]       && cp "$BACKUP_DIR/wpa_supplicant.conf.bak"       /etc/wpa_supplicant/wpa_supplicant.conf
     [ -f "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" ] && cp "$BACKUP_DIR/wpa_supplicant-wlan0.conf.bak" /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
     [ -f "$BACKUP_DIR/boot_wpa_supplicant.conf.bak" ]  && cp "$BACKUP_DIR/boot_wpa_supplicant.conf.bak"  /boot/wpa_supplicant.conf
+    # Dienste wieder freigeben
+    systemctl unmask wpa_supplicant.service 2>/dev/null || true
+    systemctl unmask NetworkManager.service 2>/dev/null || true
+    systemctl unmask systemd-networkd       2>/dev/null || true
+    systemctl start  systemd-networkd       2>/dev/null || true
+    systemctl unmask systemd-resolved       2>/dev/null || true
+    systemctl start  systemd-resolved       2>/dev/null || true
 }
 
 setup_ap_mode() {
@@ -58,9 +64,12 @@ setup_ap_mode() {
         mv /etc/NetworkManager/NetworkManager.conf /etc/NetworkManager/NetworkManager.conf.bak
     fi
 
-    systemctl mask wpa_supplicant.service 2>/dev/null || true
-    systemctl mask NetworkManager.service 2>/dev/null || true
-    nmcli device disconnect wlan0 2>/dev/null || true
+    systemctl stop  NetworkManager.service 2>/dev/null || true
+    systemctl mask  wpa_supplicant.service  2>/dev/null || true
+    systemctl mask  NetworkManager.service  2>/dev/null || true
+    systemctl stop  systemd-networkd        2>/dev/null || true
+    systemctl mask  systemd-networkd        2>/dev/null || true
+    nmcli device disconnect wlan0           2>/dev/null || true
     iw dev wlan0 disconnect       2>/dev/null || true
     ifconfig wlan0 down 2>/dev/null || true
     sleep 1
@@ -72,11 +81,12 @@ interface wlan0
 static ip_address=192.168.50.1/24
 nohook wpa_supplicant
 EOC
-    systemctl restart dhcpcd 2>/dev/null || service dhcpcd restart 2>/dev/null || pkill -HUP dhcpcd || true
-    # IP sofort erzwingen – dhcpcd kann zu langsam sein
+    systemctl restart dhcpcd 2>/dev/null || service dhcpcd restart 2>/dev/null || true
+    # IP sofort erzwingen, dhcpcd danach stoppen damit kein Konflikt mit dnsmasq entsteht
     ip addr flush dev wlan0 2>/dev/null || true
     ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
     ip link set wlan0 up
+    systemctl stop dhcpcd 2>/dev/null || true
     # Warten bis IP tatsaechlich gesetzt ist
     for i in $(seq 1 15); do
         ip addr show wlan0 | grep -q '192.168.50.1' && break
@@ -156,6 +166,8 @@ setup_client_mode() {
 
     systemctl unmask wpa_supplicant.service 2>/dev/null || true
     systemctl unmask NetworkManager.service 2>/dev/null || true
+    systemctl unmask systemd-resolved       2>/dev/null || true
+    systemctl start  systemd-resolved       2>/dev/null || true
 
     cat > /etc/wpa_supplicant/wpa_supplicant.conf <<EOF
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -272,10 +284,13 @@ fi
 for f in /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant-wlan0.conf; do
     [ -f "$f" ] && rm -f "$f"
 done
-systemctl mask wpa_supplicant.service 2>/dev/null || true
-systemctl mask NetworkManager.service 2>/dev/null || true
-nmcli device disconnect wlan0 2>/dev/null || true
-iw dev wlan0 disconnect       2>/dev/null || true
+systemctl stop  NetworkManager.service 2>/dev/null || true
+systemctl mask  wpa_supplicant.service 2>/dev/null || true
+systemctl mask  NetworkManager.service 2>/dev/null || true
+systemctl stop  systemd-networkd       2>/dev/null || true
+systemctl mask  systemd-networkd       2>/dev/null || true
+nmcli device disconnect wlan0          2>/dev/null || true
+iw dev wlan0 disconnect                2>/dev/null || true
 ifconfig wlan0 down 2>/dev/null || true; sleep 1; ifconfig wlan0 up 2>/dev/null || true
 
 sed -i '/^interface wlan0$/,/^nohook wpa_supplicant$/d' /etc/dhcpcd.conf
@@ -285,10 +300,11 @@ static ip_address=192.168.50.1/24
 nohook wpa_supplicant
 EOC
 systemctl restart dhcpcd 2>/dev/null || true
-# IP sofort erzwingen – dhcpcd kann zu langsam sein
+# IP sofort erzwingen, dhcpcd danach stoppen damit kein Konflikt mit dnsmasq entsteht
 ip addr flush dev wlan0 2>/dev/null || true
 ip addr add 192.168.50.1/24 dev wlan0 2>/dev/null || true
 ip link set wlan0 up
+systemctl stop dhcpcd 2>/dev/null || true
 # Warten bis IP tatsaechlich gesetzt ist
 for i in $(seq 1 15); do
     ip addr show wlan0 | grep -q '192.168.50.1' && break
