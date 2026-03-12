@@ -34,11 +34,14 @@ def read_config():
             cfg = json.load(f)
     else:
         cfg = dict(CONFIG_DEFAULTS)
-    # Automatisch lora_net_id aus Hostname setzen, falls nicht vorhanden oder leer
+    # Automatisch ap_ssid und lora_net_id aus Hostname setzen, falls nicht vorhanden oder leer
     import socket, hashlib
     changed = False
+    hostname = socket.gethostname()
+    if not cfg.get('ap_ssid') or cfg.get('ap_ssid') == 'ZeroLora':
+        cfg['ap_ssid'] = hostname
+        changed = True
     if not cfg.get('lora_net_id') or str(cfg.get('lora_net_id')).strip() in ('', '0', '0x0'):
-        hostname = socket.gethostname()
         lora_id = hex(int(hashlib.sha256(hostname.encode()).hexdigest()[:4], 16))
         cfg['lora_net_id'] = lora_id
         changed = True

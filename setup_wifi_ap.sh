@@ -5,13 +5,14 @@
 CONFIG="/home/zero/LoRa-Test/lora_config.json"
 _cfg() { python3 -c "import json,sys; d=json.load(open('$CONFIG')); print(d.get(sys.argv[1], sys.argv[2]))" "$1" "$2" 2>/dev/null; }
 
+HOSTNAME_SSID=$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "ZeroLora")
 if [ -f "$CONFIG" ]; then
-    SSID=$(_cfg ap_ssid "ZeroLora")
+    SSID=$(_cfg ap_ssid "$HOSTNAME_SSID")
     PASSWORD=$(_cfg ap_password "loramesh123")
     ZERO_SSID=$(_cfg client_ssid "Zero")
     ZERO_PASSWORD=$(_cfg client_password "password")
 else
-    SSID="ZeroLora"
+    SSID="$HOSTNAME_SSID"
     PASSWORD="loramesh123"
     ZERO_SSID="Zero"
     ZERO_PASSWORD="password"

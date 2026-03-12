@@ -1,5 +1,5 @@
 {
-  "ap_ssid": "ZeroLora",
+  "ap_ssid": "",
   "ap_password": "loramesh123",
   "client_ssid": "Zero",
   "client_password": "password",
