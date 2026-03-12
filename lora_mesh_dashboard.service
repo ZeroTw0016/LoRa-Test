@@ -4,7 +4,6 @@ After=network-online.target lora_wifi_check.service hostapd.service dnsmasq.serv
 Wants=network-online.target lora_wifi_check.service hostapd.service dnsmasq.service
 
 [Service]
-ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do [ -e /dev/ttyS0 ] && exit 0; sleep 1; done; exit 0'
 ExecStart=/usr/bin/python3 -m lora_mesh.dashboard
 WorkingDirectory=/home/zero/LoRa-Test
 Restart=always
