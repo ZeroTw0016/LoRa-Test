@@ -4,8 +4,29 @@ import subprocess
 import time
 import json
 import os
+import logging
+from collections import deque
 
 from .node import LoRaMeshNode, PKT_JOIN, PKT_ACK, PKT_BEACON, PKT_MSG
+
+# ---------------------------------------------------------------------------
+# In-memory log buffer (last 300 lines)
+# ---------------------------------------------------------------------------
+_log_buffer = deque(maxlen=300)
+_log_lock   = threading.Lock()
+
+class _DequeHandler(logging.Handler):
+    def emit(self, record):
+        line = self.format(record)
+        with _log_lock:
+            _log_buffer.append(line)
+
+_handler = _DequeHandler()
+_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s',
+                                        datefmt='%H:%M:%S'))
+logging.root.addHandler(_handler)
+logging.root.setLevel(logging.INFO)
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Config helpers
@@ -75,8 +96,10 @@ app  = Flask(__name__)
 try:
     node = _init_node()
     node.config_mesh()
+    log.info('LoRa hardware initialised successfully.')
 except Exception as _hw_err:
     import sys
+    log.warning(f'LoRa hardware init failed: {_hw_err}')
     print(f'WARNING: LoRa hardware init failed: {_hw_err}', file=sys.stderr)
     node = None
 
@@ -137,8 +160,23 @@ def history():
         msgs = list(message_history[-50:])
     return jsonify({'messages': msgs})
 
-@app.route('/config', methods=['GET'])
-def get_config():
+@app.route('/logs')
+def get_logs():
+    with _log_lock:
+        lines = list(_log_buffer)
+    # also try journalctl for older entries
+    try:
+        out = subprocess.check_output(
+            ['journalctl', '-u', 'lora_mesh_dashboard.service',
+             '-n', '100', '--no-pager', '--output=short'],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode(errors='replace')
+        jlines = [l for l in out.splitlines() if l.strip()]
+    except Exception:
+        jlines = []
+    return jsonify({'logs': jlines + lines})
+
+
     return jsonify(read_config())
 
 @app.route('/config', methods=['POST'])
@@ -186,6 +224,7 @@ def _recv_loop():
             result = node.recv_mesh()
             if result:
                 pkt_type, data, rssi, src = result
+                log.info(f'RX pkt_type={pkt_type:#04x} src={src:#06x} rssi={rssi}')
                 if pkt_type == PKT_JOIN:
                     node.send_ack(src)
                 elif pkt_type == PKT_MSG:
@@ -211,6 +250,7 @@ def _recv_loop():
         if time.time() - _last_beacon >= 30:
             try:
                 node.broadcast_beacon()
+                log.debug('Beacon sent.')
             except Exception:
                 pass
             _last_beacon = time.time()
@@ -222,8 +262,11 @@ threading.Thread(target=_recv_loop, daemon=True).start()
 if node is not None:
     try:
         node.broadcast_join()
+        log.info('Join beacon broadcast.')
     except Exception:
         pass
+
+log.info('Dashboard running on http://0.0.0.0:5000')
 
 
 def run_dashboard():

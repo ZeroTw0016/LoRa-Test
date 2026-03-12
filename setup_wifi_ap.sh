@@ -202,8 +202,8 @@ echo "Installiere Abhaengigkeiten..."
 apt-get install -y hostapd dnsmasq python3-pip
 pip3 install flask pyserial --break-system-packages
 
-# Benutzer zero zu den benoetigen Gruppen hinzufuegen (GPIO, Serial, sudo-Befehle)
-usermod -aG gpio,dialout,tty zero 2>/dev/null || true
+# Benutzer zero zu den benoetigen Gruppen hinzufuegen (GPIO, Serial, sudo-Befehle, Journal)
+usermod -aG gpio,dialout,tty,systemd-journal zero 2>/dev/null || true
 
 # sudoers-Eintrag fuer zero: nur reboot und das Setup-Script erlaubt
 SUDOERS_FILE="/etc/sudoers.d/zero-lora"

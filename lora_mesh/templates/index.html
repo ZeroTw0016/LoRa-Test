@@ -106,6 +106,18 @@
         .tab-btn.active { background: #2d8cf0; color: #fff; border-color: #2d8cf0; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .logbox {
+            background: #0d0f14;
+            color: #a8ff78;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78em;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 420px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -117,6 +129,7 @@
         <button class="tab-btn" onclick="showTab('tab-devices')">Geraete</button>
         <button class="tab-btn" onclick="showTab('tab-config')">Konfiguration</button>
         <button class="tab-btn" onclick="showTab('tab-system')">System</button>
+        <button class="tab-btn" onclick="showTab('tab-logs')">Logs</button>
     </div>
 
     <!-- ── Chat ── -->
@@ -207,6 +220,18 @@
         </div>
         <div class="status" id="sysStatus"></div>
     </div>
+
+    <!-- ── Logs ── -->
+    <div id="tab-logs" class="tab-content card">
+        <h2>Service-Logs</h2>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <button onclick="fetchLogs()">Aktualisieren</button>
+            <label style="margin:0;display:flex;align-items:center;gap:6px;color:#aaa;font-size:0.85em">
+                <input type="checkbox" id="autoScrollLogs" checked> Auto-Scroll
+            </label>
+        </div>
+        <div class="logbox" id="logBox">Lade...</div>
+    </div>
 </div>
 
 <script>
@@ -215,8 +240,9 @@ function showTab(id) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    const idx = ['tab-chat','tab-devices','tab-config','tab-system'].indexOf(id);
+    const idx = ['tab-chat','tab-devices','tab-config','tab-system','tab-logs'].indexOf(id);
     document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    if (id === 'tab-logs') fetchLogs();
 }
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
@@ -321,6 +347,20 @@ async function saveConfig() {
     }
 }
 
+// ── Logs ─────────────────────────────────────────────────────────────────────
+async function fetchLogs() {
+    try {
+        const res = await fetch('/logs');
+        const data = await res.json();
+        const box = document.getElementById('logBox');
+        box.textContent = (data.logs || []).join('\n') || '(keine Eintraege)';
+        if (document.getElementById('autoScrollLogs').checked)
+            box.scrollTop = box.scrollHeight;
+    } catch(e) {
+        document.getElementById('logBox').textContent = 'Fehler: ' + e;
+    }
+}
+
 // ── System ────────────────────────────────────────────────────────────────────
 async function doReboot() {
     if (!confirm('Wirklich neu starten?')) return;
@@ -349,6 +389,9 @@ fetchHistory();
 loadConfig();
 setInterval(fetchRecv, 2000);
 setInterval(fetchDevices, 10000);
+setInterval(() => {
+    if (document.getElementById('tab-logs').classList.contains('active')) fetchLogs();
+}, 5000);
 </script>
 </body>
 </html>
